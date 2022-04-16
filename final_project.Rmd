@@ -9,7 +9,10 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(dplyr)
+library(tidyverse)
+library(tidyr)
 ```
+
 
 ```{r}
 inverse_logit = function(logit) {
@@ -115,4 +118,106 @@ ggplot(df_poisson, aes(x=exp(lambda_projection), color=factor(treatment))) +
 DiD(logit_projection, logit, treatment)
 DiD(lambda_projection, lambda, treatment)
 ```
+
+
+
+# Card and Kruger's Parallel Trend Assumption 
+```{r, warning = FALSE}
+
+dat <- read_table2('public.dat')
+codebook <- read_lines(file = "codebook")
+
+# extract variable name
+variable_names <- codebook %>%
+  `[`(8:59) %>%
+  `[`(-c(5, 6, 13, 14, 32, 33)) %>%
+  str_sub(1, 13) %>%
+  str_squish() %>%
+  str_to_lower()
+
+
+# match with raw data
+dat <- dat %>%
+  select(-X47) %>%
+  `colnames<-`(., variable_names) %>%
+  mutate_all(as.numeric) %>%
+  mutate(sheet = as.character(sheet))
+
+
+# compare before and after outcome
+dat <- dat %>% 
+  group_by(state) %>% 
+  mutate(fte=empft+nmgrs+(0.5*emppt),
+         fte_after=empft2+nmgrs2+(0.5*emppt2)) 
+
+
+summary <- dat %>% group_by(state) %>% 
+            summarise(mean_before=mean(fte,na.rm=T),
+                      mean_after=mean(fte_after,na.rm=T),
+                      var_before=var(fte,na.rm=T),
+                      var_after=var(fte_after,na.rm=T),
+                      count_before=sum(!is.na(fte)),
+                      count_after=sum(!is.na(fte_after))) %>%
+           ungroup() %>%
+           mutate(se_before=sqrt(var_before/count_before),
+                  se_after=sqrt(var_after/count_after)) %>%
+          mutate(state=ifelse(state==0,"PA","NJ")) 
+
+
+# treatment and control average unemployment
+plot_df <- dat %>%
+  group_by(state) %>% 
+  summarise(mean_before=mean(fte,na.rm=T),
+            mean_after=mean(fte_after,na.rm=T)) %>%
+  mutate(state = ifelse(state == 0, "PA", "NJ")) 
+
+# wide to long format 
+plot_df_2 <- gather(plot_df, 
+                    time, 
+                    obs_unemployment, 
+                    mean_before:mean_after, 
+                    factor_key = TRUE) 
+
+# impute counterfactual unemployment average on the treated 
+y_counterfactual = plot_df_2[3,3] - plot_df_2[1, 3] + plot_df_2[2, 3]
+
+plot_df_2 <- plot_df_2 %>%
+  mutate(time = ifelse(time == 'mean_before', 0, 1))
+
+plot_df_2$diff_unemploy <- plot_df_2$obs_unemployment
+plot_df_2[4, 4] <- y_counterfactual[1,1]
+
+
+# plot parallel trend asssumption 
+ggplot(plot_df_2) +
+  geom_line(aes(x = time, y = obs_unemployment, linetype = state)) +
+  geom_line(aes(x = time, y = diff_unemploy, linetype = state)) +
+  labs(title = "Minimum Wage Observed Effect and Counterfactual Effect on NJ and PA ")
+
+
+
+  
+```
+
+
+
+
+
+
+# Regression Perspective 
+```{r}
+dat_regression <- gather(dat, 
+                    time, 
+                    unemployment, 
+                    fte:fte_after, 
+                    factor_key = TRUE) 
+
+dat_regression <- dat_regression %>%
+  mutate(time = ifelse(time == 'fte', 0, 1)) %>%
+  select(state, time, unemployment)
+
+
+# fitting linear regression 
+```
+
 
