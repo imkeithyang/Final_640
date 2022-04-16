@@ -1,0 +1,90 @@
+---
+title: "Exploring Difference in Difference Estimator Behavior Under Different Settings"
+author: "Zheyuan Liu, Haoming Yang"
+date: "4/16/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+```
+
+```{r}
+inverse_logit = function(logit) {
+  return (exp(logit)/(1+exp(logit)))
+}
+```
+
+```{r}
+# Binary Timepoint
+t = c(rep(0,500), rep(1,500), rep(0,500), rep(1,500))
+# Binaray Treatment
+treatment = c(rep(0,1000), rep(1,1000))
+x = c(rnorm(1000, 0, 1), rnorm(1000, 0.5, 1))
+
+alpha = rnorm(1,0,1)
+gamma = rnorm(1,3,1)
+delta_t = rnorm(1,0,1)
+tau = rnorm(1,3,1)
+beta = rnorm(1,0,1)
+error = rnorm(length(treatment), 0, 0.3)
+logit = alpha + gamma*treatment + delta_t*t + tau*t*treatment + beta*x + 
+  error
+p = inverse_logit(logit)
+
+# remove tau term, assuming no treatment
+logit_projection = alpha + gamma*treatment + delta_t*t + beta*x + 
+  error
+p_projection = inverse_logit(logit)
+```
+
+```{r}
+df = data.frame(t = t, treatment = treatment, logit = logit, p = p, 
+                logit_projection = logit_projection, p_projection = p_projection)
+ggplot(df, aes(x=t, color=factor(treatment))) + 
+  geom_line(aes(y=logit)) + 
+  geom_line(aes(y=logit_projection), linetype = "dashed")
+
+ggplot(df, aes(x=t, color=factor(treatment))) + 
+  geom_line(aes(y=p)) + 
+  geom_line(aes(y=p_projection), linetype = "dashed")
+```
+
+```{r}
+# Binary Timepoint
+t = c(rep(0,500), rep(1,500), rep(0,500), rep(1,500))
+# Binaray Treatment
+treatment = c(rep(0,1000), rep(1,1000))
+x = c(rnorm(1000, 5, 1), rnorm(1000, 8, 1))
+
+alpha = rnorm(1,1,1)
+gamma = rnorm(1,10,1)
+delta_t = rnorm(1,1,1)
+tau = rnorm(1,5,1)
+beta = rnorm(1,1,1)
+error = rnorm(length(treatment), 0, 0.3)
+lambda = alpha + gamma*treatment + delta_t*t + tau*t*treatment + beta*x + 
+  error
+count = rpois(length(lambda), lambda)
+
+# get projection count via inverse cdf sampling
+# remove tau term, assuming no treatment
+lambda_projection = alpha + gamma*treatment + delta_t*t + beta*x + 
+  error
+count_projection = qpois(ppois(count, lambda), lambda_projection)
+```
+
+```{r}
+df = data.frame(t = t, treatment = treatment, lambda = lambda, count = count, 
+                lambda_projection = lambda_projection, count_projection = count_projection)
+ggplot(df, aes(x=t, color=factor(treatment))) + 
+  geom_line(aes(y=lambda)) + 
+  geom_line(aes(y=lambda_projection), linetype = "dashed")
+
+ggplot(df, aes(x=t, color=factor(treatment))) + 
+  geom_line(aes(y=count)) + 
+  geom_line(aes(y=count_projection), linetype = "dashed")
+```
+
