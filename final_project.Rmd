@@ -170,3 +170,26 @@ ggplot(plot_df_2) +
 
   
 ```
+
+
+
+
+
+
+# Regression Perspective 
+```{r}
+dat_regression <- gather(dat, 
+                    time, 
+                    unemployment, 
+                    fte:fte_after, 
+                    factor_key = TRUE) 
+
+dat_regression <- dat_regression %>%
+  mutate(time = ifelse(time == 'fte', 0, 1)) %>%
+  select(state, time, unemployment)
+
+
+# fitting linear regression 
+```
+
+
