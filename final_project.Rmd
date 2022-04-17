@@ -197,10 +197,16 @@ DiD(lambda_projection, lambda, treatment)
 
 # fitting logistic regression on binary
 ```{r}
-# change dataframe name
+# change dataframe name (df_binary and df_poisson)
 logistic_fit <- glm(outcome ~ treatment + time_point + time_point*treatment + x, 
                      data = df_binary, 
                      family = "binomial")
+
+
+
+poisson_fit <- glm(outcome ~ treatment + time_point + time_point*treatment + x, 
+                     data = df_poisson, 
+                     family = "poisson")
 ```
 
 
@@ -293,8 +299,14 @@ dat_regression <- dat_regression %>%
   mutate(time = ifelse(time == 'fte', 0, 1)) %>%
   select(state, time, unemployment)
 
+# unparametric did 
+colnames(dat_regression) <- c("treatment", "time_point", "outcome")
+non_para_did(dat_regression)
 
 # fitting linear regression 
+linear_minum_wage <- lm(unemployment ~ state + time + state * time, 
+                        data = dat_regression)
+summary(linear_minum_wage)
 ```
 
 
