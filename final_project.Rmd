@@ -20,77 +20,147 @@ inverse_logit = function(logit) {
 }
 ```
 
+$$
+\begin{gather*}
+Y \sim Bernoulli (p) \\
+l = \alpha + \gamma G + \delta_t t + \tau D + \beta x + \epsilon \\
+p = \frac{e^{l}}{1+e^{l}}
+\end{gather*}
+$$
+
 ```{r}
 # Binary Timepoint
-t = c(rep(0,500), rep(1,500), rep(0,500), rep(1,500))
+t = c(0,1)
 # Binaray Treatment
-treatment = c(rep(0,1000), rep(1,1000))
-x = c(rnorm(1000, 0, 1), rnorm(1000, 1, 1))
+treatment = c(0,1)
+n_control = 1000
+n_treat = 300
+x = list(rnorm(n_contol, 0, 1), rnorm(n_treat, 0, 1))
 
 alpha = rnorm(1,0,1)
 gamma = rnorm(1,0,1)
-delta_t = rnorm(1,1,1)
-tau = rnorm(1,3,1)
+delta_t = rnorm(1,0.2,1)
+tau = rnorm(1,0.2,1)
 beta = rnorm(1,0,1)
-error = rnorm(length(treatment), 0, 0.1)
-logit = alpha + gamma*treatment + delta_t*t + tau*t*treatment + beta*x + error
-p = inverse_logit(logit)
 
-# remove tau term, assuming no treatment
-error = rnorm(length(treatment), 0, 0.1)
-logit_projection = alpha + gamma*treatment + delta_t*t + beta*x + error*t
-logit_projection = logit_projection
-p_projection = inverse_logit(logit_projection)
+error = rnorm(n_contol, 0, 0.1)
+logit_before_untreat = alpha + gamma*treatment[1] + delta_t*t[1] + 
+  tau*t[1]*treatment[1] + beta*x[[1]] + error
+
+error = rnorm(n_treat, 0, 0.1)
+logit_before_treat = alpha + gamma*treatment[2] + delta_t*t[1] + 
+  tau*t[1]*treatment[2] + beta*x[[2]] + error
+
+error = rnorm(n_contol, 0, 0.1)
+logit_after_untreat = alpha + gamma*treatment[1] + delta_t*t[2] + 
+  tau*t[2]*treatment[1] + beta*x[[1]] + error
+
+error = rnorm(n_treat, 0, 0.1)
+logit_after_treat = alpha + gamma*treatment[2] + delta_t*t[2] + 
+  tau*t[2]*treatment[2] + beta*x[[2]] + error
+
+logit_after_treat_para = alpha + gamma*treatment[2] + delta_t*t[2] +
+  beta*x[[2]] + error
+
+df_logit = data.frame(treatment = c(rep(0, n_control), rep(1, n_treat)),
+                      logit_before = c(logit_before_untreat, logit_before_treat),
+                      logit_after = c(logit_after_untreat, logit_after_treat))
+
+ggplot(df_logit, aes(x=logit_before, color=factor(treatment))) +
+  geom_point(aes(y=logit_after))+ 
+  scale_color_manual(values=c("black", "red"))
+
+df_avg_logit = data.frame(t = t,
+                          logit_untreat = c(mean(logit_before_untreat), mean(logit_after_untreat)), 
+                          logit_treat = c(mean(logit_before_treat), mean(logit_after_treat)),
+                          logit_treat_para = c(mean(logit_before_treat), mean(logit_after_treat_para)))
+ggplot(df_avg_logit, aes(x = t))+
+  geom_line(aes(y=logit_untreat)) + 
+  geom_point(aes(y=logit_untreat)) +
+  geom_line(aes(y=logit_treat), color="red") + 
+  geom_point(aes(y=logit_treat), color="black") + 
+  geom_line((aes(y=logit_treat_para)), linetype="dashed", color="red") +
+  geom_point(aes(y=logit_treat_para), color="black")
 ```
 
 ```{r}
-df_logit = data.frame(t = t, treatment = treatment, logit = logit, p = p, 
-                logit_projection = logit_projection, p_projection = p_projection)
-ggplot(df_logit, aes(x=t, color=factor(treatment))) + 
-  geom_line(aes(y=logit)) + 
-  geom_line(aes(y=logit_projection), linetype = "dashed")
-
-ggplot(df_logit, aes(x=t, color=factor(treatment))) + 
-  geom_line(aes(y=p)) + 
-  geom_line(aes(y=p_projection), linetype = "dashed")
-
+df_y_logit = data.frame(treatment = c(rep(0, n_control), rep(1, n_treat)),
+logit_before = as.integer(inverse_logit(c(logit_before_untreat, logit_before_treat))>0.5),
+logit_after = as.integer(inverse_logit(c(logit_after_untreat, logit_after_treat))>0.5))
 ```
+
+
+$$
+\begin{gather*}
+Y \sim Poisson (\lambda) \\
+\log(\lambda) = \alpha + \gamma G + \delta_t t + \tau D + \beta x + \epsilon \\
+\end{gather*}
+$$
+
+To simulate outcome, we take the modeled log lambda and sample from Poisson distribution
+
 
 ```{r}
 # Binary Timepoint
-t = c(rep(0,500), rep(1,500), rep(0,500), rep(1,500))
+t = c(0,1)
 # Binaray Treatment
-treatment = c(rep(0,1000), rep(1,1000))
-x = c(rnorm(1000, 5, 1), rnorm(1000, 10, 1))
+treatment = c(0,1)
+n_control = 1000
+n_treat = 300
+x = list(rnorm(n_contol, 0, 1), rnorm(n_treat, 0, 1))
 
-alpha = rnorm(1,10,1)
-gamma = rnorm(1,1,1)
-delta_t = rnorm(1,0,1)
-tau = rnorm(1,10,1)
+alpha = rnorm(1,0,1)
+gamma = rnorm(1,0,1)
+delta_t = rnorm(1,0.2,1)
+tau = rnorm(1,0.2,1)
 beta = rnorm(1,0,1)
-error = rnorm(length(treatment), 0, 1)
-lambda = log(alpha + gamma*treatment + delta_t*t + tau*t*treatment + beta*x + error)
-count = rpois(length(lambda), exp(lambda))
 
-# get projection count via inverse cdf sampling
-# remove tau term, assuming no treatment
-error = rnorm(length(treatment), 0, 1)
-lambda_projection = log(alpha + gamma*treatment + delta_t*t + beta*x + error)
-lambda_projection = lambda_projection
-count_projection = qpois(ppois(count, exp(lambda)), exp(lambda_projection))
+error = rnorm(n_contol, 0, 0.1)
+lambda_before_untreat = alpha + gamma*treatment[1] + delta_t*t[1] + 
+  tau*t[1]*treatment[1] + beta*x[[1]] + error
+
+error = rnorm(n_treat, 0, 0.1)
+lambda_before_treat = alpha + gamma*treatment[2] + delta_t*t[1] + 
+  tau*t[1]*treatment[2] + beta*x[[2]] + error
+
+error = rnorm(n_contol, 0, 0.1)
+lambda_after_untreat = alpha + gamma*treatment[1] + delta_t*t[2] + 
+  tau*t[2]*treatment[1] + beta*x[[1]] + error
+
+error = rnorm(n_treat, 0, 0.1)
+lambda_after_treat = alpha + gamma*treatment[2] + delta_t*t[2] + 
+  tau*t[2]*treatment[2] + beta*x[[2]] + error
+
+lambda_after_treat_para = alpha + gamma*treatment[2] + delta_t*t[2] +
+  beta*x[[2]] + error
+
+df_lambda = data.frame(treatment = c(rep(0, n_control), rep(1, n_treat)),
+                      lambda_before = c(lambda_before_untreat, lambda_before_treat),
+                      lambda_after = c(lambda_after_untreat, lambda_after_treat))
+
+ggplot(df_lambda, aes(x=lambda_before, color=factor(treatment))) +
+  geom_point(aes(y=lambda_after)) + 
+  scale_color_manual(values=c("black", "red"))
+
+df_avg_lambda = data.frame(t = t,
+                          lambda_untreat = c(mean(lambda_before_untreat), mean(lambda_after_untreat)), 
+                          lambda_treat = c(mean(lambda_before_treat), mean(lambda_after_treat)),
+                          lambda_treat_para = c(mean(lambda_before_treat), mean(lambda_after_treat_para)))
+ggplot(df_avg_lambda, aes(x = t))+
+  geom_line(aes(y=lambda_untreat)) + 
+  geom_point(aes(y=lambda_untreat)) +
+  geom_line(aes(y=lambda_treat), color="red") + 
+  geom_point(aes(y=lambda_treat), color="black") + 
+  geom_line((aes(y=lambda_treat_para)), linetype="dashed", color="red") +
+  geom_point(aes(y=lambda_treat_para), color="black")
 ```
 
 ```{r}
-df_poisson = data.frame(t = t, treatment = treatment, lambda = lambda, count = count, 
-                lambda_projection = lambda_projection, count_projection = count_projection)
-ggplot(df_poisson, aes(x=t, color=factor(treatment))) + 
-  geom_line(aes(y=lambda)) + 
-  geom_line(aes(y=lambda_projection), linetype = "dashed")
-
-ggplot(df_poisson, aes(x=t, color=factor(treatment))) + 
-  geom_line(aes(y=count)) + 
-  geom_line(aes(y=count_projection), linetype = "dashed")
+df_y_poisson = data.frame(treatment = c(rep(0, n_control), rep(1, n_treat)),
+logit_before = rpois(n_control + n_treat, exp(c(lambda_before_untreat, lambda_before_treat))),
+logit_after = rpois(n_control + n_treat, exp(c(lambda_after_untreat, lambda_after_treat))))
 ```
+
 # non-parametric
 ```{r}
 DiD = function(Y_before, Y_after, G) {
@@ -108,8 +178,11 @@ DiD = function(Y_before, Y_after, G) {
 
 ## DiD non parametric
 ```{r}
-ggplot(df_logit, aes(x=logit_projection, color=factor(treatment))) + 
-  geom_point(aes(y=logit))
+df_logit = data.frame(y_before = logit[t==0], 
+                      y_after = logit[t==1],
+                      treatment = c(rep(0,500), rep(1,500)))
+ggplot(df_logit, aes(x=y_before, color=factor(treatment))) + 
+  geom_point(aes(y=y_after))
 
 ggplot(df_poisson, aes(x=exp(lambda_projection), color=factor(treatment))) + 
   geom_point(aes(y=exp(lambda)))
@@ -194,14 +267,8 @@ ggplot(plot_df_2) +
   geom_line(aes(x = time, y = diff_unemploy, linetype = state)) +
   labs(title = "Minimum Wage Observed Effect and Counterfactual Effect on NJ and PA ")
 
-
-
   
 ```
-
-
-
-
 
 
 # Regression Perspective 
