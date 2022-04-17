@@ -35,7 +35,7 @@ t = c(0,1)
 treatment = c(0,1)
 n_control = 1000
 n_treat = 300
-x = list(rnorm(n_contol, 0, 1), rnorm(n_treat, 0, 1))
+x = list(rnorm(n_control, 0, 1), rnorm(n_treat, 0, 1))
 
 alpha = rnorm(1,0,1)
 gamma = rnorm(1,0,1)
@@ -43,7 +43,7 @@ delta_t = rnorm(1,0.2,1)
 tau = rnorm(1,0.2,1)
 beta = rnorm(1,0,1)
 
-error = rnorm(n_contol, 0, 0.1)
+error = rnorm(n_control, 0, 0.1)
 logit_before_untreat = alpha + gamma*treatment[1] + delta_t*t[1] + 
   tau*t[1]*treatment[1] + beta*x[[1]] + error
 
@@ -51,7 +51,7 @@ error = rnorm(n_treat, 0, 0.1)
 logit_before_treat = alpha + gamma*treatment[2] + delta_t*t[1] + 
   tau*t[1]*treatment[2] + beta*x[[2]] + error
 
-error = rnorm(n_contol, 0, 0.1)
+error = rnorm(n_control, 0, 0.1)
 logit_after_untreat = alpha + gamma*treatment[1] + delta_t*t[2] + 
   tau*t[2]*treatment[1] + beta*x[[1]] + error
 
@@ -83,6 +83,8 @@ ggplot(df_avg_logit, aes(x = t))+
   geom_point(aes(y=logit_treat_para), color="black")
 ```
 
+
+
 ```{r}
 df_y_logit = data.frame(treatment = c(rep(0, n_control), rep(1, n_treat)),
 logit_before = as.integer(inverse_logit(c(logit_before_untreat, logit_before_treat))>0.5),
@@ -107,7 +109,7 @@ t = c(0,1)
 treatment = c(0,1)
 n_control = 1000
 n_treat = 300
-x = list(rnorm(n_contol, 0, 1), rnorm(n_treat, 0, 1))
+x = list(rnorm(n_control, 0, 1), rnorm(n_treat, 0, 1))
 
 alpha = rnorm(1,0,1)
 gamma = rnorm(1,0,1)
@@ -115,7 +117,7 @@ delta_t = rnorm(1,0.2,1)
 tau = rnorm(1,0.2,1)
 beta = rnorm(1,0,1)
 
-error = rnorm(n_contol, 0, 0.1)
+error = rnorm(n_control, 0, 0.1)
 lambda_before_untreat = alpha + gamma*treatment[1] + delta_t*t[1] + 
   tau*t[1]*treatment[1] + beta*x[[1]] + error
 
@@ -123,7 +125,7 @@ error = rnorm(n_treat, 0, 0.1)
 lambda_before_treat = alpha + gamma*treatment[2] + delta_t*t[1] + 
   tau*t[1]*treatment[2] + beta*x[[2]] + error
 
-error = rnorm(n_contol, 0, 0.1)
+error = rnorm(n_control, 0, 0.1)
 lambda_after_untreat = alpha + gamma*treatment[1] + delta_t*t[2] + 
   tau*t[2]*treatment[1] + beta*x[[1]] + error
 
@@ -163,15 +165,16 @@ logit_after = rpois(n_control + n_treat, exp(c(lambda_after_untreat, lambda_afte
 
 # non-parametric
 ```{r}
-DiD = function(Y_before, Y_after, G) {
-  treat_after = Y_after[G==1] 
-  treat_before = Y_before[G==1] 
-  not_treat_after = Y_after[G==0]  
-  not_treat_before = Y_before[G==0] 
+non_para_did <- function(df){
+  y_1_t1 <- mean(df$outcome[df$treatment == 1 & df$time_point == 1])
+  y_1_t0 <- mean(df$outcome[df$treatment == 1 & df$time_point == 0])
   
-  treated = mean(treat_after) - mean(treat_before)
-  not_treated = mean(not_treat_after) - mean(not_treat_before)
-  return (treated - not_treated)
+  y_0_t1 <-  mean(df$outcome[df$treatment == 0 & df$time_point == 1])
+  y_0_t0 <-  mean(df$outcome[df$treatment == 0 & df$time_point == 0])
+  
+  did <- (y_1_t1 - y_1_t0) - (y_0_t1 - y_0_t0)
+  
+  return (did)
 }
 ```
 
@@ -192,6 +195,13 @@ DiD(logit_projection, logit, treatment)
 DiD(lambda_projection, lambda, treatment)
 ```
 
+# fitting logistic regression on binary
+```{r}
+# change dataframe name
+logistic_fit <- glm(outcome ~ treatment + time_point + time_point*treatment + x, 
+                     data = df_binary, 
+                     family = "binomial")
+```
 
 
 # Card and Kruger's Parallel Trend Assumption 
