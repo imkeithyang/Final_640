@@ -50,23 +50,25 @@ beta_binary = rnorm(1,0,1)
  
 # Simulate logit l 
 error = rnorm(n_control, 0, 0.1)
-logit_before_untreat = alpha + gamma*treatment[1] + delta_t*t[1] + 
-  tau*t[1]*treatment[1] + beta*x[[1]] + error
+logit_before_untreat = alpha_binary + gamma_binary*treatment[1] + delta_t_binary*t[1] + 
+  tau_binary*t[1]*treatment[1] + beta_binary*x_binary[[1]] + error
 
 error = rnorm(n_treat, 0, 0.1)
-logit_before_treat = alpha + gamma*treatment[2] + delta_t*t[1] + 
-  tau*t[1]*treatment[2] + beta*x[[2]] + error
+logit_before_treat = alpha_binary + gamma_binary*treatment[2] + delta_t_binary*t[1] + 
+  tau_binary*t[1]*treatment[2] + beta_binary*x_binary[[2]] + error
 
 error = rnorm(n_control, 0, 0.1)
-logit_after_untreat = alpha + gamma*treatment[1] + delta_t*t[2] + 
-  tau*t[2]*treatment[1] + beta*x[[1]] + error
+logit_after_untreat = alpha_binary + gamma_binary*treatment[1] + delta_t_binary*t[2] + 
+  tau_binary*t[2]*treatment[1] + beta_binary*x_binary[[1]] + error
 
 error = rnorm(n_treat, 0, 0.1)
-logit_after_treat = alpha + gamma*treatment[2] + delta_t*t[2] + 
-  tau*t[2]*treatment[2] + beta*x[[2]] + error
+logit_after_treat = alpha_binary + gamma_binary*treatment[2] + delta_t_binary*t[2] + 
+  tau_binary*t[2]*treatment[2] + beta_binary*x_binary[[2]] + error
 
-logit_after_treat_para = alpha + gamma*treatment[2] + delta_t*t[2] +
-  beta*x[[2]] + error
+# No tau term because treatment = 0 for both groups
+# simulate parallel trend
+logit_after_treat_para = alpha_binary + gamma_binary*treatment[2] + delta_t_binary*t[2] +
+  beta_binary*x_binary[[2]] + error
 
 ```
 
@@ -99,8 +101,8 @@ y_binary_before = as.integer(inverse_logit(c(logit_before_untreat, logit_before_
 y_binary_after = as.integer(inverse_logit(c(logit_after_untreat, logit_after_treat))>0.5)
 
 df_y_logit = data.frame(treatment = c(rep(0, n_control), rep(1, n_treat), rep(0, n_control), rep(1, n_treat)),
-                        time_point = c(rep(0, n_control+n_treat)),
-                        x_binary = c(x_binary, x_binary),
+                        time_point = c(rep(0, n_control+n_treat), rep(0, n_control+n_treat)),
+                        x = c(unlist(x_binary), unlist(x_binary)),
                         outcome = c(y_binary_before, y_binary_after))
 ```
 
@@ -113,7 +115,6 @@ Y \sim Poisson (\lambda) \\
 $$
 
 To simulate outcome, we take the modeled log lambda and sample from Poisson distribution
-
 
 ```{r}
 # Binary Timepoint
@@ -135,23 +136,23 @@ beta_poisson = rnorm(1,0,1)
 
 # simulation count
 error = rnorm(n_control, 0, 0.1)
-lambda_before_untreat = alpha + gamma*treatment[1] + delta_t*t[1] + 
-  tau*t[1]*treatment[1] + beta*x[[1]] + error
+lambda_before_untreat = alpha_poisson + gamma_poisson*treatment[1] + delta_t_poisson*t[1] + 
+  tau_poisson*t[1]*treatment[1] + beta_poisson*x_poisson[[1]] + error
 
 error = rnorm(n_treat, 0, 0.1)
-lambda_before_treat = alpha + gamma*treatment[2] + delta_t*t[1] + 
-  tau*t[1]*treatment[2] + beta*x[[2]] + error
+lambda_before_treat = alpha_poisson + gamma_poisson*treatment[2] + delta_t_poisson*t[1] + 
+  tau_poisson*t[1]*treatment[2] + beta_poisson*x_poisson[[2]] + error
 
 error = rnorm(n_control, 0, 0.1)
-lambda_after_untreat = alpha + gamma*treatment[1] + delta_t*t[2] + 
-  tau*t[2]*treatment[1] + beta*x[[1]] + error
+lambda_after_untreat = alpha_poisson + gamma_poisson*treatment[1] + delta_t_poisson*t[2] + 
+  tau_poisson*t[2]*treatment[1] + beta_poisson*x_poisson[[1]] + error
 
 error = rnorm(n_treat, 0, 0.1)
-lambda_after_treat = alpha + gamma*treatment[2] + delta_t*t[2] + 
-  tau*t[2]*treatment[2] + beta*x[[2]] + error
+lambda_after_treat = alpha_poisson + gamma_poisson*treatment[2] + delta_t_poisson*t[2] + 
+  tau_poisson*t[2]*treatment[2] + beta_poisson*x_poisson[[2]] + error
 
-lambda_after_treat_para = alpha + gamma*treatment[2] + delta_t*t[2] +
-  beta*x[[2]] + error
+lambda_after_treat_para = alpha_poisson + gamma_poisson*treatment[2] + delta_t_poisson*t[2] +
+  beta_poisson*x_poisson[[2]] + error
 ```
 
 ```{r}
@@ -179,12 +180,12 @@ ggplot(df_avg_lambda, aes(x = t))+
 
 ```{r}
 # simulate count outcome
-y_poisson_before = rpois(n_control + n_treat, c(lambda_before_untreat, lambda_before_treat))
-y_poisson_after = rpois(n_control + n_treat, c(lambda_after_untreat, lambda_after_treat))
+y_poisson_before = rpois(n_control + n_treat, exp(c(lambda_before_untreat, lambda_before_treat)))
+y_poisson_after = rpois(n_control + n_treat, exp(c(lambda_after_untreat, lambda_after_treat)))
 
 df_y_poisson = data.frame(treatment = c(rep(0, n_control), rep(1, n_treat), rep(0, n_control), rep(1, n_treat)),
-                        time_point = c(rep(0, n_control+n_treat)),
-                        x_poisson = c(x_poisson, x_poisson),
+                        time_point = c(rep(0, n_control+n_treat), rep(0, n_control+n_treat)),
+                        x = c(unlist(x_poisson), unlist(x_poisson)),
                         outcome = c(y_poisson_before, y_poisson_after))
 ```
 
@@ -281,7 +282,7 @@ dat_regression <- dat_regression %>%
 
 # Poisson Regression
 ```{r}
-df_y_poisson
+
 ```
 
 
