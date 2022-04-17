@@ -37,19 +37,10 @@ t = c(0,1)
 treatment = c(0,1)
 n_control = 1000
 n_treat = 300
-<<<<<<< HEAD
-x = list(rnorm(n_control, 0, 1), rnorm(n_treat, 0, 1))
-=======
->>>>>>> 561924d02b86645010e4f231de742df3186bcd1e
 
 # Simulate X
 x_binary = list(rnorm(n_control, 0, 1), rnorm(n_treat, 0, 1))
 
-<<<<<<< HEAD
-error = rnorm(n_control, 0, 0.1)
-logit_before_untreat = alpha + gamma*treatment[1] + delta_t*t[1] + 
-  tau*t[1]*treatment[1] + beta*x[[1]] + error
-=======
 # Simulate coefficients
 alpha_binary = rnorm(1,0,1)
 gamma_binary = rnorm(1,0,1)
@@ -61,20 +52,14 @@ beta_binary = rnorm(1,0,1)
 error = rnorm(n_control, 0, 0.1)
 logit_before_untreat = alpha_binary + gamma_binary*treatment[1] + delta_t_binary*t[1] + 
   tau_binary*t[1]*treatment[1] + beta_binary*x_binary[[1]] + error
->>>>>>> 561924d02b86645010e4f231de742df3186bcd1e
 
 error = rnorm(n_treat, 0, 0.1)
 logit_before_treat = alpha_binary + gamma_binary*treatment[2] + delta_t_binary*t[1] + 
   tau_binary*t[1]*treatment[2] + beta_binary*x_binary[[2]] + error
 
 error = rnorm(n_control, 0, 0.1)
-<<<<<<< HEAD
-logit_after_untreat = alpha + gamma*treatment[1] + delta_t*t[2] + 
-  tau*t[2]*treatment[1] + beta*x[[1]] + error
-=======
 logit_after_untreat = alpha_binary + gamma_binary*treatment[1] + delta_t_binary*t[2] + 
   tau_binary*t[2]*treatment[1] + beta_binary*x_binary[[1]] + error
->>>>>>> 561924d02b86645010e4f231de742df3186bcd1e
 
 error = rnorm(n_treat, 0, 0.1)
 logit_after_treat = alpha_binary + gamma_binary*treatment[2] + delta_t_binary*t[2] + 
@@ -140,19 +125,10 @@ t = c(0,1)
 treatment = c(0,1)
 n_control = 1000
 n_treat = 300
-<<<<<<< HEAD
-x = list(rnorm(n_control, 0, 1), rnorm(n_treat, 0, 1))
-=======
->>>>>>> 561924d02b86645010e4f231de742df3186bcd1e
 
 # simulate X
 x_poisson = list(rnorm(n_control, 0, 1), rnorm(n_treat, 0, 1))
 
-<<<<<<< HEAD
-error = rnorm(n_control, 0, 0.1)
-lambda_before_untreat = alpha + gamma*treatment[1] + delta_t*t[1] + 
-  tau*t[1]*treatment[1] + beta*x[[1]] + error
-=======
 # simulate coefficient
 alpha_poisson = rnorm(1,0,1)
 gamma_poisson = rnorm(1,0,1)
@@ -164,20 +140,13 @@ beta_poisson = rnorm(1,0,1)
 error = rnorm(n_control, 0, 0.1)
 lambda_before_untreat = alpha_poisson + gamma_poisson*treatment[1] + delta_t_poisson*t[1] + 
   tau_poisson*t[1]*treatment[1] + beta_poisson*x_poisson[[1]] + error
->>>>>>> 561924d02b86645010e4f231de742df3186bcd1e
 
 error = rnorm(n_treat, 0, 0.1)
 lambda_before_treat = alpha_poisson + gamma_poisson*treatment[2] + delta_t_poisson*t[1] + 
   tau_poisson*t[1]*treatment[2] + beta_poisson*x_poisson[[2]] + error
-
-error = rnorm(n_control, 0, 0.1)
-<<<<<<< HEAD
-lambda_after_untreat = alpha + gamma*treatment[1] + delta_t*t[2] + 
-  tau*t[2]*treatment[1] + beta*x[[1]] + error
-=======
+  
 lambda_after_untreat = alpha_poisson + gamma_poisson*treatment[1] + delta_t_poisson*t[2] + 
   tau_poisson*t[2]*treatment[1] + beta_poisson*x_poisson[[1]] + error
->>>>>>> 561924d02b86645010e4f231de742df3186bcd1e
 
 error = rnorm(n_treat, 0, 0.1)
 lambda_after_treat = alpha_poisson + gamma_poisson*treatment[2] + delta_t_poisson*t[2] + 
