@@ -11,6 +11,7 @@ library(ggplot2)
 library(dplyr)
 library(tidyverse)
 library(tidyr)
+library(patchwork)
 set.seed(640)
 ```
 
@@ -44,8 +45,8 @@ x_binary = list(rnorm(n_control, 0, 1), rnorm(n_treat, 0, 1))
 
 # Simulate coefficients
 alpha_binary = 2# rnorm(1,0,1)
-gamma_binary = -2# rnorm(1,0,1)
-delta_t_binary = -1#rnorm(1,0.2,1)
+gamma_binary = -1.5# rnorm(1,0,1)
+delta_t_binary = -1.5#rnorm(1,0.2,1)
 tau_binary = 1#rnorm(1,0.2,1)
 beta_binary = 0.5# rnorm(1,0,1)
  
@@ -78,42 +79,54 @@ df_logit = data.frame(treatment = c(rep(0, n_control), rep(1, n_treat)),
                       logit_before = c(logit_before_untreat, logit_before_treat),
                       logit_after = c(logit_after_untreat, logit_after_treat))
 
-ggplot(df_logit, aes(x=logit_before, color=factor(treatment))) +
+p1 = ggplot(df_logit, aes(x=logit_before, color=factor(treatment))) +
   geom_point(aes(y=logit_after)) + 
-  scale_color_manual(values=c("black", "red"))
+  scale_color_manual(values=c("black", "red"), labels=c("Control", "Treatment")) + 
+  labs(color = "Group", x="Logit(P) Before", y="Logit(P) After", title="A")
 
 df_p = data.frame(treatment = c(rep(0, n_control), rep(1, n_treat)),
                       p_before = inverse_logit(c(logit_before_untreat, logit_before_treat)),
                       p_after = inverse_logit(c(logit_after_untreat, logit_after_treat)))
 
-ggplot(df_p, aes(x=p_before, color=factor(treatment))) +
+p2 = ggplot(df_p, aes(x=p_before, color=factor(treatment))) +
   geom_point(aes(y=p_after)) + 
-  scale_color_manual(values=c("black", "red"))
+  scale_color_manual(values=c("black", "red"), labels=c("Control", "Treatment")) + 
+  labs(color = "Group", x="Probability Before", y="Probability After", title="B")
 
 df_avg_logit = data.frame(t = t,
                           logit_untreat = c(mean(logit_before_untreat), mean(logit_after_untreat)), 
                           logit_treat = c(mean(logit_before_treat), mean(logit_after_treat)),
                           logit_treat_para = c(mean(logit_before_treat), mean(logit_after_treat_para)))
-ggplot(df_avg_logit, aes(x = t))+
-  geom_line(aes(y=logit_untreat)) + 
+p3 = ggplot(df_avg_logit, aes(x = t))+
+  geom_line(aes(y=logit_untreat, color="Control")) + 
   geom_point(aes(y=logit_untreat)) +
-  geom_line(aes(y=logit_treat), color="red") + 
-  geom_point(aes(y=logit_treat), color="black") + 
-  geom_line((aes(y=logit_treat_para)), linetype="dashed", color="red") +
-  geom_point(aes(y=logit_treat_para), color="black")
+  geom_line(aes(y=logit_treat, linetype="Actual", color="Treatment")) + 
+  geom_point(aes(y=logit_treat)) + 
+  geom_line(aes(y=logit_treat_para, linetype="Projection", color="Treatment")) +
+  geom_point(aes(y=logit_treat_para)) + 
+  scale_color_manual(values=c("black", "red"), labels=c("Control", "Treatment")) + 
+  scale_linetype_manual(values=c("solid", "dashed"), labels=c("Actual", "Projection")) + 
+  labs(color = "Group", linetype="Assumption", x="Time(0,1)", y="Logit(P)", title="C")
 
 df_avg_p = data.frame(t = t,
                           p_untreat = inverse_logit(c(mean(logit_before_untreat), mean(logit_after_untreat))), 
                           p_treat = inverse_logit(c(mean(logit_before_treat), mean(logit_after_treat))),
                           p_treat_para = inverse_logit(c(mean(logit_before_treat), mean(logit_after_treat_para))))
-ggplot(df_avg_p, aes(x = t))+
-  geom_line(aes(y=p_untreat)) + 
+p4 = ggplot(df_avg_p, aes(x = t))+
+  geom_line(aes(y=p_untreat, color="Control")) + 
   geom_point(aes(y=p_untreat)) +
-  geom_line(aes(y=p_treat), color="red") + 
-  geom_point(aes(y=p_treat), color="black") + 
-  geom_line((aes(y=p_treat_para)), linetype="dashed", color="red") +
-  geom_point(aes(y=p_treat_para), color="black")
+  geom_line(aes(y=p_treat, linetype="Actual", color="Treatment")) + 
+  geom_point(aes(y=p_treat)) + 
+  geom_line(aes(y=p_treat_para, linetype="Projection", color="Treatment")) +
+  geom_point(aes(y=p_treat_para)) + 
+  scale_color_manual(values=c("black", "red"), labels=c("Control", "Treatment")) + 
+  scale_linetype_manual(values=c("solid", "dashed"), labels=c("Actual", "Projection")) + 
+  labs(color = "Group", linetype="Assumption", x="Time(0,1)", y="Probability", title="D")
+
+p1 + p2 + p3 + p4
 ```
+
+
 
 ```{r}
 # simulate binary outcome
@@ -148,10 +161,10 @@ n_treat = 300
 x_poisson = list(rnorm(n_control, 0, 1), rnorm(n_treat, 0, 1))
 
 # simulate coefficient
-alpha_poisson = 5# rnorm(1,0,1)
-gamma_poisson = 2# rnorm(1,0,1)
-delta_t_poissony = -3#rnorm(1,0.2,1)
-tau_poisson = -1#rnorm(1,0.2,1)
+alpha_poisson = 0.3# rnorm(1,0,1)
+gamma_poisson = 1# rnorm(1,0,1)
+delta_t_poisson = -0.5#rnorm(1,0.2,1)
+tau_poisson = -0.3#rnorm(1,0.2,1)
 beta_poisson = 1# rnorm(1,0,1)
 
 # simulation count
@@ -177,25 +190,55 @@ lambda_after_treat_para = alpha_poisson + gamma_poisson*treatment[2] + delta_t_p
 
 ```{r}
 # visualization
-df_lambda = data.frame(treatment = c(rep(0, n_control), rep(1, n_treat)),
-                      lambda_before = c(lambda_before_untreat, lambda_before_treat),
-                      lambda_after = c(lambda_after_untreat, lambda_after_treat))
+df_log_lambda = data.frame(treatment = c(rep(0, n_control), rep(1, n_treat)),
+                      log_lambda_before = c(lambda_before_untreat, lambda_before_treat),
+                      log_lambda_after = c(lambda_after_untreat, lambda_after_treat))
 
-ggplot(df_lambda, aes(x=lambda_before, color=factor(treatment))) +
+p1 = ggplot(df_log_lambda, aes(x=log_lambda_before, color=factor(treatment))) +
+  geom_point(aes(y=log_lambda_after)) + 
+  scale_color_manual(values=c("black", "red"), labels=c("Control", "Treatment")) + 
+  labs(color = "Group", x="Log Lambda Before", y="Log Lambda After", title = "A")
+
+df_lambda = data.frame(treatment = c(rep(0, n_control), rep(1, n_treat)),
+                      lambda_before = exp(c(lambda_before_untreat, lambda_before_treat)),
+                      lambda_after = exp(c(lambda_after_untreat, lambda_after_treat)))
+
+p2 = ggplot(df_lambda, aes(x=lambda_before, color=factor(treatment))) +
   geom_point(aes(y=lambda_after)) + 
-  scale_color_manual(values=c("black", "red"))
+  scale_color_manual(values=c("black", "red"), labels=c("Control", "Treatment")) + 
+  labs(color = "Group", x="Lambda Before", y="Lambda After", title = "B")
+
+df_avg_log_lambda = data.frame(t = t,
+                          log_lambda_untreat = c(mean(lambda_before_untreat), mean(lambda_after_untreat)), 
+                          log_lambda_treat = c(mean(lambda_before_treat), mean(lambda_after_treat)),
+                          log_lambda_treat_para = c(mean(lambda_before_treat), mean(lambda_after_treat_para)))
+p3 = ggplot(df_avg_log_lambda, aes(x = t))+
+  geom_line(aes(y=log_lambda_untreat, color="Control")) + 
+  geom_point(aes(y=log_lambda_untreat)) +
+  geom_line(aes(y=log_lambda_treat, linetype="Actual", color="Treatment")) + 
+  geom_point(aes(y=log_lambda_treat)) + 
+  geom_line(aes(y=log_lambda_treat_para, linetype="Projection", color="Treatment")) +
+  geom_point(aes(y=log_lambda_treat_para)) + 
+  scale_color_manual(values=c("black", "red"), labels=c("Control", "Treatment")) + 
+  scale_linetype_manual(values=c("solid", "dashed"), labels=c("Actual", "Projection")) + 
+  labs(color = "Group", linetype="Assumption", x="Time(0,1)", y="Log Lambda", title = "C")
 
 df_avg_lambda = data.frame(t = t,
-                          lambda_untreat = c(mean(lambda_before_untreat), mean(lambda_after_untreat)), 
-                          lambda_treat = c(mean(lambda_before_treat), mean(lambda_after_treat)),
-                          lambda_treat_para = c(mean(lambda_before_treat), mean(lambda_after_treat_para)))
-ggplot(df_avg_lambda, aes(x = t))+
-  geom_line(aes(y=lambda_untreat)) + 
+                          lambda_untreat = exp(c(mean(lambda_before_untreat), mean(lambda_after_untreat))), 
+                          lambda_treat = exp(c(mean(lambda_before_treat), mean(lambda_after_treat))),
+                          lambda_treat_para = exp(c(mean(lambda_before_treat), mean(lambda_after_treat_para))))
+p4 = ggplot(df_avg_lambda, aes(x = t))+
+  geom_line(aes(y=lambda_untreat, color="Control")) + 
   geom_point(aes(y=lambda_untreat)) +
-  geom_line(aes(y=lambda_treat), color="red") + 
-  geom_point(aes(y=lambda_treat), color="black") + 
-  geom_line((aes(y=lambda_treat_para)), linetype="dashed", color="red") +
-  geom_point(aes(y=lambda_treat_para), color="black")
+  geom_line(aes(y=lambda_treat, linetype="Actual", color="Treatment")) + 
+  geom_point(aes(y=lambda_treat)) + 
+  geom_line(aes(y=lambda_treat_para, linetype="Projection", color="Treatment")) +
+  geom_point(aes(y=lambda_treat_para)) + 
+  scale_color_manual(values=c("black", "red"), labels=c("Control", "Treatment")) + 
+  scale_linetype_manual(values=c("solid", "dashed"), labels=c("Actual", "Projection")) + 
+  labs(color = "Group", linetype="Assumption", x="Time(0,1)", y="Lambda", title = "D")
+
+p1 + p2 + p3 + p4
 ```
 
 ```{r}
@@ -208,6 +251,44 @@ df_y_poisson = data.frame(treatment = c(rep(0, n_control), rep(1, n_treat), rep(
                         x = c(unlist(x_poisson), unlist(x_poisson)),
                         outcome = c(y_poisson_before, y_poisson_after))
 ```
+
+# non-parametric
+```{r}
+non_para_did <- function(df){
+  y_1_t1 <- mean(df$outcome[df$treatment == 1 & df$time_point == 1])
+  y_1_t0 <- mean(df$outcome[df$treatment == 1 & df$time_point == 0])
+  
+  y_0_t1 <-  mean(df$outcome[df$treatment == 0 & df$time_point == 1])
+  y_0_t0 <-  mean(df$outcome[df$treatment == 0 & df$time_point == 0])
+  
+  did <- (y_1_t1 - y_1_t0) - (y_0_t1 - y_0_t0)
+  
+  return (did)
+}
+```
+
+# fitting logistic regression on binary
+```{r}
+binary_glm = glm(outcome ~ treatment + time_point + x + treatment:time_point, 
+                  data=df_y_logit, family="binomial")
+binary_true_parameter = c(alpha_binary, gamma_binary, delta_t_binary, beta_binary, tau_binary)
+binary_true_parameter
+binary_glm$coefficients
+exp(binary_glm$coefficients[5]) - 1
+non_para_did(df_y_logit)
+```
+
+# Poisson Regression
+```{r}
+poisson_glm = glm(outcome ~ treatment + time_point + x + treatment:time_point, 
+                  data=df_y_poisson, family="poisson")
+poisson_true_parameter = c(alpha_poisson, gamma_poisson, delta_t_poisson, beta_poisson, tau_poisson)
+poisson_true_parameter
+poisson_glm$coefficients
+exp(poisson_glm$coefficients[5]) - 1
+non_para_did(df_y_poisson)
+```
+
 
 # Card and Kruger's Parallel Trend Assumption 
 ```{r, warning = FALSE}
@@ -296,28 +377,16 @@ dat_regression <- dat_regression %>%
   mutate(time = ifelse(time == 'fte', 0, 1)) %>%
   select(state, time, unemployment)
 
+# unparametric did 
+colnames(dat_regression) <- c("treatment", "time_point", "outcome")
+non_para_did(dat_regression)
 
 # fitting linear regression 
+linear_minum_wage <- lm(unemployment ~ state + time + state * time, 
+                        data = dat_regression)
+summary(linear_minum_wage)
 ```
 
-# Logistic Regression
-```{r}
-binary_glm = glm(outcome ~ treatment + time_point + x + treatment:time_point, 
-                  data=df_y_logit, family="binomial")
-binary_true_parameter = c(alpha_binary, gamma_binary, delta_t_binary, beta_binary, tau_binary)
-binary_true_parameter
-binary_glm$coefficients
-exp(binary_glm$coefficients[5]) - 1
-```
 
-# Poisson Regression
-```{r}
-poisson_glm = glm(outcome ~ treatment + time_point + x + treatment:time_point, 
-                  data=df_y_poisson, family="poisson")
-poisson_true_parameter = c(alpha_poisson, gamma_poisson, delta_t_poisson, beta_poisson, tau_poisson)
-poisson_true_parameter
-poisson_glm$coefficients
-exp(poisson_glm$coefficients[5]) - 1
-```
 
 
