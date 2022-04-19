@@ -49,7 +49,7 @@ gamma_binary = -1.5# rnorm(1,0,1)
 delta_t_binary = -1.5#rnorm(1,0.2,1)
 tau_binary = 1#rnorm(1,0.2,1)
 beta_binary = 0.5# rnorm(1,0,1)
- 
+
 # Simulate logit l 
 error = rnorm(n_control, 0, 0.5)
 logit_before_untreat = alpha_binary + gamma_binary*treatment[1] + delta_t_binary*t[1] + 
@@ -127,7 +127,6 @@ p1 + p2 + p3 + p4
 ```
 
 
-
 ```{r}
 # simulate binary outcome
 y_binary_before = rbinom(n_control + n_treat, 1, inverse_logit(c(logit_before_untreat, logit_before_treat)))
@@ -137,6 +136,7 @@ df_y_logit = data.frame(treatment = c(rep(0, n_control), rep(1, n_treat), rep(0,
                         time_point = c(rep(0, n_control+n_treat), rep(1, n_control+n_treat)),
                         x = c(unlist(x_binary), unlist(x_binary)),
                         outcome = c(y_binary_before, y_binary_after))
+
 ```
 
 ## Simulate Count (Poisson) Outcome
@@ -252,7 +252,7 @@ df_y_poisson = data.frame(treatment = c(rep(0, n_control), rep(1, n_treat), rep(
                         outcome = c(y_poisson_before, y_poisson_after))
 ```
 
-# non-parametric
+# non-parametric DiD
 ```{r}
 non_para_did <- function(df){
   y_1_t1 <- mean(df$outcome[df$treatment == 1 & df$time_point == 1])
@@ -267,6 +267,22 @@ non_para_did <- function(df){
 }
 ```
 
+# non-parametric RiR
+```{r}
+non_para_rir <- function(df){
+  y_1_t1 <- mean(df$outcome[df$treatment == 1 & df$time_point == 1])
+  y_1_t0 <- mean(df$outcome[df$treatment == 1 & df$time_point == 0])
+  
+  y_0_t1 <-  mean(df$outcome[df$treatment == 0 & df$time_point == 1])
+  y_0_t0 <-  mean(df$outcome[df$treatment == 0 & df$time_point == 0])
+  
+  rir <- (y_1_t1 / y_1_t0) / (y_0_t1 / y_0_t0)
+  
+  return (rir)
+}
+
+```
+
 # fitting logistic regression on binary
 ```{r}
 binary_glm = glm(outcome ~ treatment + time_point + x + treatment:time_point, 
@@ -274,9 +290,18 @@ binary_glm = glm(outcome ~ treatment + time_point + x + treatment:time_point,
 binary_true_parameter = c(alpha_binary, gamma_binary, delta_t_binary, beta_binary, tau_binary)
 binary_true_parameter
 binary_glm$coefficients
-exp(binary_glm$coefficients[5]) - 1
-non_para_did(df_y_logit)
+p <- fitted(binary_glm)
+df_y_logit_outcome <- data.frame(treatment = c(rep(0, n_control), rep(1, n_treat), rep(0, n_control), rep(1, n_treat)),
+                        time_point = c(rep(0, n_control+n_treat), rep(1, n_control+n_treat)),
+                        x = c(unlist(x_binary), unlist(x_binary)),
+                        outcome = p / (1-p))
+exp(binary_glm$coefficients[5])
+non_para_rir(df_y_logit_outcome)
+
+
 ```
+
+
 
 # Poisson Regression
 ```{r}
@@ -285,14 +310,14 @@ poisson_glm = glm(outcome ~ treatment + time_point + x + treatment:time_point,
 poisson_true_parameter = c(alpha_poisson, gamma_poisson, delta_t_poisson, beta_poisson, tau_poisson)
 poisson_true_parameter
 poisson_glm$coefficients
-exp(poisson_glm$coefficients[5]) - 1
-non_para_did(df_y_poisson)
+exp(poisson_glm$coefficients[5]) 
+non_para_rir(df_y_poisson)
 ```
 
 
 # Card and Kruger's Parallel Trend Assumption 
-```{r, warning = FALSE}
 
+```{r, warning = FALSE}
 dat <- read_table2('public.dat')
 codebook <- read_lines(file = "codebook")
 
@@ -334,34 +359,56 @@ summary <- dat %>% group_by(state) %>%
 
 
 # treatment and control average unemployment
-plot_df <- dat %>%
-  group_by(state) %>% 
-  summarise(mean_before=mean(fte,na.rm=T),
-            mean_after=mean(fte_after,na.rm=T)) %>%
-  mutate(state = ifelse(state == 0, "PA", "NJ")) 
+unemployment_df <- dat %>%
+  select(state, fte, fte_after)
+
+unemployment_df <- na.omit(unemployment_df) %>%
+  
+
+unemployment_df_expand <- gather(unemployment_df, 
+                                 time, 
+                                 obs_unemployment, 
+                                 fte:fte_after, 
+                                 factor_key = TRUE) %>%
+  mutate(time = ifelse(time == "fte", 0, 1)) %>%
+  mutate(state = ifelse(state == 0, "PA", "NJ"))
+
+# p1 = ggplot(unemployment_df, aes(x=fte_after, color = factor(state))) +
+#   geom_point(aes(y=fte_after)) + 
+#   scale_color_manual(values=c("black", "red"), labels=c("Control", "Treatment")) + 
+#   labs(color = "Group", x="Unemployment Before", y="Unemployment After", title="B")
+
+mean_unemployment <- unemployment_df_expand %>%
+  group_by(time, state) %>% 
+  summarise(mean_unemployment = mean(obs_unemployment))
 
 # wide to long format 
-plot_df_2 <- gather(plot_df, 
-                    time, 
-                    obs_unemployment, 
-                    mean_before:mean_after, 
-                    factor_key = TRUE) 
-
-# impute counterfactual unemployment average on the treated 
-y_counterfactual = plot_df_2[3,3] - plot_df_2[1, 3] + plot_df_2[2, 3]
-
-plot_df_2 <- plot_df_2 %>%
-  mutate(time = ifelse(time == 'mean_before', 0, 1))
-
-plot_df_2$diff_unemploy <- plot_df_2$obs_unemployment
-plot_df_2[4, 4] <- y_counterfactual[1,1]
+# plot_df_2 <- gather(mean_unemployment, 
+#                     time, 
+#                     obs_unemployment, 
+#                     mean_before:mean_after, 
+#                     factor_key = TRUE) 
 
 
-# plot parallel trend asssumption 
-ggplot(plot_df_2) +
-  geom_line(aes(x = time, y = obs_unemployment, linetype = state)) +
-  geom_line(aes(x = time, y = diff_unemploy, linetype = state)) +
-  labs(title = "Minimum Wage Observed Effect and Counterfactual Effect on NJ and PA ")
+plot_df_2 <- data.frame(t = c(0, 1), 
+                        unemployment_treated = c(20.4, 20.9), 
+                        unemployment_control = c(23.1, 21.1), 
+                        unemployment_projected = c(20.4, 18.5))
+
+
+card_parallel = ggplot(plot_df_2, aes(x = t))+
+  geom_line(aes(y=unemployment_control, color="Control")) +
+  geom_point(aes(y=unemployment_control)) +
+  geom_line(aes(y=unemployment_treated, linetype="Actual", color="Treatment")) +
+  geom_point(aes(y=unemployment_treated)) +
+  geom_line(aes(y=unemployment_projected, linetype="Projection", color="Treatment")) +
+  geom_point(aes(y=unemployment_projected)) +
+  scale_color_manual(values=c("black", "red"), labels=c("Control", "Treatment")) +
+  scale_linetype_manual(values=c("solid", "dashed"), labels=c("Actual", "Projection")) +
+  labs(color = "Group", linetype="Assumption", x="Time(0,1)", y="Unemployment")
+card_parallel
+
+
 ```
 
 
